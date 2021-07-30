@@ -19,6 +19,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "RIFFFile.h"
+
 #define RIFF_HEADER_SIZE 12
 #define DEFAULT_PATH "/mnt/d/dtmf.wav";
 
@@ -158,6 +160,39 @@ int main(int argc, char** argv){
 	
 	//TODO: Check if file exists
 	std::ifstream fp(path, std::ios::in | std::ios::binary | std::ios::ate);
+	if(!fp.is_open()){
+		std::cerr << "File can't be opened" << std::endl;
+		return EXIT_FAILURE;
+	}
+	struct stat stat_buf;
+	if(stat(path.c_str(), &stat_buf)){
+		std::cerr << "Cannot stat " << path << std::endl;
+		perror("stat");
+		return EXIT_FAILURE;
+	}
+	
+	std::cout << "stat says the file is " << stat_buf.st_size << " long." << std::endl;
+	
+	char *buffer = (char*) calloc((int) stat_buf.st_size, 'A');
+	fp.seekg(0, std::ios::beg);
+	fp.read(buffer, (int) stat_buf.st_size);
+	RIFFFile((u_int8_t*) buffer, stat_buf.st_size);
+	fp.close();
+	return EXIT_SUCCESS;
+	//Parse arguments. TODO: Make this use the standard function	
+	for(int i = 1; i < argc; i++){
+		if(argv[i][0] == '-'){
+			if(std::string(argv[i]) == "-d") do_output_data = true;
+			if(std::string(argv[i]) == "-do"){do_output_data = true; only_data = true;}
+		}else{
+			path = argv[i];
+		}
+	}
+	
+	if(path.empty()) path = DEFAULT_PATH;
+	
+	//TODO: Check if file exists
+	//std::ifstream fp(path, std::ios::in | std::ios::binary | std::ios::ate);
 	if(!fp.is_open()){
 		std::cerr << "File can't be opened" << std::endl;
 		return EXIT_FAILURE;
