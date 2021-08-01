@@ -2,6 +2,9 @@
 #include <iostream>
 
 #pragma once
+
+#define SUBCHUNK_HEADER_SIZE 12
+
 class RIFFSubChunk{
 	public:
 		RIFFSubChunk();
@@ -12,8 +15,7 @@ class RIFFSubChunk{
 		//RIFFSubChunk(u_int8_t * buf, size_t len);
 		//RIFFSubChunk(std::vector<u_int8_t> buf);
 
-		void getByteStream(u_int8_t & buf);
-		std::vector<u_int8_t> getByteStream();
+		void getByteStream(std::vector<u_int8_t> & buf);
 
 		// Sets the SubChunk ID. Returns true if successful, false if not.
 		// Format spec requires an id string 4B long. Nothing is changed on faliure.
@@ -23,7 +25,7 @@ class RIFFSubChunk{
 		// Sets the data byte vector. Returns true if successful, false if not.
 		// Format spec requires overall length less than 2^32 + 8 B. Nothing is changed on faliure.
 		bool setData(std::vector<u_int8_t> data);
-		//std::vector<u_int8_t> getData();
+		std::vector<u_int8_t> getData();
 
 		//virtual bool operator==(RIFFSubChunk lhs) const;
 		// Out stream operator overload, can't be virtual. Should call print(os, lhs).
