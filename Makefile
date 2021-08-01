@@ -1,20 +1,21 @@
 CXXFLAGS= -ggdb -Wall -O0
 
-DEPS=build/RIFFFile.o build/RIFFSubChunk.o build/util.o
+BUILDDIR=build
 
-riffedit: main.cpp $(wildcard *.h) $(wildcard *.cpp) $(DEPS)
-	$(CXX) main.cpp $(wildcard build/*.o) -o build/riffedit $(CXXFLAGS)
+# grab all cpp files with their path that are in some DIRS list
+SRC = $(wildcard *.cpp) $(foreach DIR,$(DIRS),$(wildcard $(DIR)/*.cpp))
+
+# stick the .obj/ directory before the .cpp file and change the extension
+OBJ = $(addprefix $(BUILDDIR)/,$(SRC:.cpp=.o))
+
+riffedit: $(OBJ)
+	g++ -o $(BUILDDIR)/riffedit $(BUILDDIR)/*.o
 	rm -f ./riffedit
-	ln -s build/riffedit ./riffedit
+	ln -s $(BUILDDIR)/riffedit ./riffedit
 
-build/RIFFFile.o: RIFFFile.h RIFFFile.cpp
-	$(CXX) RIFFFile.cpp $(CXXFLAGS) -c -o build/RIFFFile.o
-
-build/RIFFSubChunk.o: RIFFSubChunk.h RIFFSubChunk.cpp util.h
-	$(CXX) RIFFSubChunk.cpp $(CXXFLAGS) -c -o build/RIFFSubChunk.o
-
-build/util.o: util.h util.cpp
-	$(CXX) util.cpp $(CXXFLAGS) -c -o build/util.o
+$(BUILDDIR)/%.o : %.cpp %.h
+	@mkdir -p $(@D)
+	$(COMPILE.cpp) -o $@ $<
 
 clean:
 	rm -rf build/
