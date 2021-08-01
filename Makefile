@@ -13,6 +13,9 @@ riffedit: $(OBJ)
 	rm -f ./riffedit
 	ln -s $(BUILDDIR)/riffedit ./riffedit
 
+build/main.o: main.cpp
+	$(COMPILE.cpp) -o $@ $<
+
 $(BUILDDIR)/%.o : %.cpp %.h
 	@mkdir -p $(@D)
 	$(COMPILE.cpp) -o $@ $<
