@@ -1,6 +1,8 @@
 #include <string>
 #include <algorithm>
 #include "RIFFFile.h"
+#include "RIFFSubChunk.h"
+#include "RIFFDataSubChunk.h"
 
 RIFFFile::RIFFFile(){}
 RIFFFile::RIFFFile(u_int8_t & buf){
@@ -43,9 +45,10 @@ RIFFFile::RIFFFile(u_int8_t * buf, size_t len){
 		std::cout << std::endl;
 		std::cout << "\033[1m======SubChunk" << i << "======\033[m" << std::endl;
 		std::cout << "Base pointer offset is " << ptr - buf + 12L << std::endl;
-		auto sc = parseSubchunk((u_int8_t*) ptr, &size);
-		std::cout << sc << std::endl;
-		subchunks.push_back(sc); //Add 12 to the offset because of the RIFF header	
+		RIFFSubChunk *new_sc;
+		parseSubchunk((u_int8_t*) ptr, &size, new_sc);
+		std::cout << *new_sc << std::endl; //Test the insertion operator while you're at it
+		subchunks.push_back(new_sc); //Add 12 to the offset because of the RIFF header	
 		std::cout << std::endl;
 		
 		//Advance the pointer
@@ -55,8 +58,7 @@ RIFFFile::RIFFFile(u_int8_t * buf, size_t len){
 }
 
 
-RIFFSubChunk RIFFFile::parseSubchunk(uint8_t *baseptr, u_int32_t *size__){
-	RIFFSubChunk new_subchunk;
+void RIFFFile::parseSubchunk(uint8_t *baseptr, u_int32_t *size__, RIFFSubChunk* & new_subchunk){
 	std::string id((char*) baseptr, 4);
 	u_int32_t *size_ = (u_int32_t*) (baseptr + 4);
 	u_int32_t size = *size_ + 8; //Read size doesn't include the first 8 bytes
@@ -69,19 +71,8 @@ RIFFSubChunk RIFFFile::parseSubchunk(uint8_t *baseptr, u_int32_t *size__){
 	for(u_int32_t i = 0; i < size; i++){
 		data.push_back(baseptr[i]);
 	}
-	if(!new_subchunk.setId(id)){
-		throw "Can't set id for subchunk";
-	}
-	if(!new_subchunk.setData(data)){
-		throw "Can't set data for subchunk";
-	}
 	if(id == "data"){
-		if(false){
-			std::cout << "hexdump of the data contained" << std::endl << std::endl;
-			//hexdump(path, offset, len);
-		}else{
-			std::cout << "Suppressed data output." << std::endl;
-		}
+		new_subchunk = new RIFFDataSubChunk;
 	}else if(id == "fmt "){
 		u_int8_t *extra_params = NULL;
 		u_int16_t *extra_params_len = NULL;
@@ -120,6 +111,7 @@ RIFFSubChunk RIFFFile::parseSubchunk(uint8_t *baseptr, u_int32_t *size__){
 			std::cout << "Extra parameters:" << std::endl;
 			//hexdump(path, offset, len);
 		}
+		new_subchunk = new RIFFSubChunk;
 	}else if(id == "LIST"){
 		//Make sure the list type is "INFO", that's the only one we know
 		std::string list_type_id((char*) baseptr+8, 4);
@@ -142,11 +134,15 @@ RIFFSubChunk RIFFFile::parseSubchunk(uint8_t *baseptr, u_int32_t *size__){
 			std::cout << info_id << ": " << text << std::endl;
 			ptr += *text_size;
 		}
+		new_subchunk = new RIFFSubChunk;
 		
 	}else{
-		std::cout << "Unknown SubChunk id \"" << id << "\"." << std::endl;
-		std::cout << "Data contained:" << std::endl;
-//		hexdump(path, offset, len);
+		new_subchunk = new RIFFSubChunk;
 	}
-	return new_subchunk;
+	if(!new_subchunk->setId(id)){
+		throw "Can't set id for subchunk";
+	}
+	if(!new_subchunk->setData(data)){
+		throw "Can't set data for subchunk";
+	}
 }
