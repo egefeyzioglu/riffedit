@@ -69,6 +69,9 @@ RIFFSubChunk RIFFFile::parseSubchunk(uint8_t *baseptr, u_int32_t *size__){
 	for(u_int32_t i = 0; i < size; i++){
 		data.push_back(baseptr[i]);
 	}
+	if(!new_subchunk.setId(id)){
+		throw "Can't set id for subchunk";
+	}
 	if(!new_subchunk.setData(data)){
 		throw "Can't set data for subchunk";
 	}
