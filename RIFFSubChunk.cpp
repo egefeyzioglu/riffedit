@@ -37,13 +37,13 @@ void RIFFSubChunk::print(std::ostream & os) const {
 	char tmp_fd_path[4096];
 	sprintf(tmp_fd_path, "/proc/%d/fd/%d", getpid(), tmp_fd);
 	//	Write to file
-	write(tmp_fd, "test", 4);
+	write(tmp_fd, data.data(), data.size());
 	// Call hexdump -C on that file and capture its output. Send the captured output to os
 	std::cout << std::flush;
 	std::array<char, 128> buffer;
 	std::string result;
 	char cmd[300];
-	sprintf(cmd, "/usr/bin/hexdump %s -C -s %d -n %d", tmp_fd_path, offset, 4);
+	sprintf(cmd, "/usr/bin/hexdump %s -C -s %d -n %d", tmp_fd_path, offset, data.size());
 	std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
 	if (!pipe) {
 		throw std::runtime_error("popen() failed!");
@@ -52,6 +52,8 @@ void RIFFSubChunk::print(std::ostream & os) const {
 		result += buffer.data();
 	}
 	os << result;
+	unlink(tmp_template);
+	close(tmp_fd);
 }
 
 void RIFFSubChunk::getByteStream(u_int8_t & buf){}

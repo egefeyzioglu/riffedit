@@ -2,7 +2,6 @@
 #include <algorithm>
 #include "RIFFFile.h"
 
-
 RIFFFile::RIFFFile(){}
 RIFFFile::RIFFFile(u_int8_t & buf){
 	
@@ -39,15 +38,14 @@ RIFFFile::RIFFFile(u_int8_t * buf, size_t len){
 	u_int8_t *ptr = buf;
 	int i = 1;
 	while(ptr - buf < *chunk_size - 8){ //-8 because we need to skip over stuff not included in the count
-		std::string id((char*) ptr, 4);
-		
-		u_int32_t *size_ = (u_int32_t*) (ptr + 4);
-		u_int32_t size = *size_; //So that we aren't mutating the buffer
-		size+= 8; //Read size doesn't include the first 8 bytes
-		
+		u_int32_t size;	
 		
 		std::cout << std::endl;
-		this->handle_subchunk((u_int8_t*) ptr, size, id, ptr - buf + 12L, i); //Add 12 to the offset because of the RIFF header	
+		std::cout << "\033[1m======SubChunk" << i << "======\033[m" << std::endl;
+		std::cout << "Base pointer offset is " << ptr - buf + 12L << std::endl;
+		auto sc = parseSubchunk((u_int8_t*) ptr, &size);
+		std::cout << sc << std::endl;
+		subchunks.push_back(sc); //Add 12 to the offset because of the RIFF header	
 		std::cout << std::endl;
 		
 		//Advance the pointer
@@ -57,13 +55,23 @@ RIFFFile::RIFFFile(u_int8_t * buf, size_t len){
 }
 
 
-void RIFFFile::handle_subchunk(uint8_t *baseptr, u_int32_t len, std::string id, size_t offset, int subchunk_no){
+RIFFSubChunk RIFFFile::parseSubchunk(uint8_t *baseptr, u_int32_t *size__){
 	RIFFSubChunk new_subchunk;
-	subchunks.push_back(new_subchunk);
-	std::cout << "\033[1m======SubChunk" << subchunk_no << "======\033[m" << std::endl;
-	std::cout << "Base pointer offset is " << offset << std::endl;
-	std::cout << "SubChunk" << subchunk_no << " ID: \"" << id << "\""  << std::endl;
-	std::cout << "SubChunk" << subchunk_no << " Size: "<< len << std::endl;
+	std::string id((char*) baseptr, 4);
+	u_int32_t *size_ = (u_int32_t*) (baseptr + 4);
+	u_int32_t size = *size_ + 8; //Read size doesn't include the first 8 bytes
+	*size__ = size;
+	
+	std::cout << "ID: \"" << id << "\""  << std::endl;
+	std::cout << " Size: "<< size << std::endl;
+	std::vector<u_int8_t> data;
+	data.reserve((int64_t) size);
+	for(u_int32_t i = 0; i < size; i++){
+		data.push_back(baseptr[i]);
+	}
+	if(!new_subchunk.setData(data)){
+		throw "Can't set data for subchunk";
+	}
 	if(id == "data"){
 		if(false){
 			std::cout << "hexdump of the data contained" << std::endl << std::endl;
@@ -89,7 +97,7 @@ void RIFFFile::handle_subchunk(uint8_t *baseptr, u_int32_t len, std::string id, 
 		ptr += 2;
 		u_int16_t *bits_per_sample = (u_int16_t*) ptr;
 		ptr += 2;
-		if(baseptr + len != ptr){ //We have extra data
+		if(baseptr + size != ptr){ //We have extra data
 			extra_params_len = (u_int16_t*) ptr;
 			ptr += 2;
 			extra_params = ptr;
@@ -114,11 +122,11 @@ void RIFFFile::handle_subchunk(uint8_t *baseptr, u_int32_t len, std::string id, 
 		std::string list_type_id((char*) baseptr+8, 4);
 		if(list_type_id != "INFO"){
 			std::cerr << "Unknown list type id: \"" << list_type_id << "\"" << std::endl;
-			return;
+			throw "ERROR";
 		}
 		uint8_t *ptr = baseptr;
 		ptr+=12;//Skip header
-		while(ptr != baseptr + len){
+		while(ptr != baseptr + size){
 			std::string info_id((char*) ptr, 4);
 			ptr += 4;
 			u_int32_t *text_size = (u_int32_t*) ptr;
@@ -137,4 +145,5 @@ void RIFFFile::handle_subchunk(uint8_t *baseptr, u_int32_t len, std::string id, 
 		std::cout << "Data contained:" << std::endl;
 //		hexdump(path, offset, len);
 	}
+	return new_subchunk;
 }
